@@ -15,12 +15,13 @@ const bookingSchema = mongoose.Schema({
 	},
 	date: {
 		type: Date,
+		default: Date.now,
 	},
 	seats: {
 		type: Array,
 	},
 	status: {
-		type: Array,
+		type: String,
 	},
 });
 

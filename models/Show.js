@@ -3,6 +3,11 @@ const mongoose = require('mongoose');
 const showSchema = mongoose.Schema({
 	date: {
 		type: Date,
+		required: true,
+	},
+	theatre: {
+		type: String,
+		required: true,
 	},
 	title: {
 		type: mongoose.Schema.Types.ObjectId,

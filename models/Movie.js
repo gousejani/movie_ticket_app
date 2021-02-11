@@ -5,7 +5,19 @@ const movieSchema = mongoose.Schema({
 		type: String,
 		required: true,
 	},
-	banner: {
+	banners: {
+		type: Array,
+	},
+	actors: {
+		type: Array,
+	},
+	director: {
+		type: String,
+	},
+	genre: {
+		type: String,
+	},
+	language: {
 		type: String,
 	},
 });

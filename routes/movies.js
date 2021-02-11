@@ -1,7 +1,6 @@
 const express = require('express');
 const Movie = require('../models/Movie');
 const Show = require('../models/Show');
-const auth = require('../middleware/auth');
 
 const router = express.Router();
 const { check, validationResult } = require('express-validator');
@@ -20,11 +19,24 @@ router.post(
 		if (!errors.isEmpty()) {
 			return res.status(400).json({ errors: errors.array() });
 		}
-		const { title, banner } = req.body;
+		let { title, banners, actors, director, genre, language } = req.body;
+		banners = banners
+			.split(',')
+			.filter((banner) => banner.trim() !== '')
+			.map((banner) => banner.trim());
+		actors = actors
+			.split(',')
+			.filter((actor) => actor.trim() !== '')
+			.map((actor) => actor.trim());
+
 		try {
 			const movie = new Movie({
 				title,
-				banner,
+				banners,
+				actors,
+				director,
+				genre,
+				language,
 			});
 			await movie.save();
 			res.json(movie);
@@ -37,13 +49,14 @@ router.post(
 
 // Add show
 // @route   POST api/movies/show/:id
-// @desc    New Show
+// @desc    New Show on movie with id
 // @access  public
 
 router.post(
 	'/show/:id',
 	check('date', 'show date and time are required').not().isEmpty(),
-	check('time', 'show date and time are required').not().isEmpty(),
+	// check('time', 'show date and time are required').not().isEmpty(), //Future implementation
+	check('theatre', 'show date and time are required').not().isEmpty(),
 	check('rows', 'rows are required').not().isEmpty(),
 	check('columns', 'columns are required').not().isEmpty(),
 	async (req, res) => {
@@ -51,7 +64,7 @@ router.post(
 		if (!errors.isEmpty()) {
 			return res.status(400).json({ errors: errors.array() });
 		}
-		const { date, rows, columns, time } = req.body;
+		const { date, rows, columns, theatre } = req.body;
 		let d = new Date(date);
 		try {
 			const seats = trueArray(parseInt(rows), parseInt(columns));
@@ -59,6 +72,7 @@ router.post(
 				title: req.params.id,
 				date: d,
 				seats,
+				theatre,
 			});
 			await show.save();
 			res.json(show);
@@ -82,52 +96,51 @@ router.get('/', async (req, res) => {
 		res.status(500).json({ errors: [{ msg: 'Internal Server Error' }] });
 	}
 });
+// @route   Get api/movies/:id
+// @desc    Get all movie title list
+// @access  public
 
-// @route   Get api/movies/:movie_id/
+router.get('/:id', async (req, res) => {
+	try {
+		const movie = await Movie.findById(req.params.id);
+		res.json(movie);
+	} catch (err) {
+		console.log(err);
+		res.status(500).json({ errors: [{ msg: 'Internal Server Error' }] });
+	}
+});
+
+// @route   Get api/movies/shows/:movie_id/
 // @desc    Get shows by movie and date query (date + 3 days shows return)
 // @access  public
 
-router.get('/:titleId', async (req, res) => {
+router.get('/shows/:titleId', async (req, res) => {
 	try {
-		console.log(req.query.date);
-		var d = new Date(req.query.date);
-		const query = {
-			$and: [
-				{
-					date: {
-						$gte: new Date(d),
-						$lt: new Date(d.setDate(d.getDate() + 3)),
-					},
-				},
-				{ title: req.params.titleId },
-			],
-		};
-		const a = await Show.find(query);
-		res.json(a);
+		// Future implementation, search by date
+		// var d = new Date(req.query.date);
+		// const query = {
+		// 	$and: [
+		// 		{
+		// 			date: {
+		// 				$gte: new Date(d),
+		// 				$lt: new Date(d.setDate(d.getDate() + 3)),
+		// 			},
+		// 		},
+		// 		{ title: req.params.titleId },
+		// 	],
+		// };
+		const query = { title: req.params.titleId };
+		const shows = await Show.find(query).populate('title', [
+			'banners',
+			'actors',
+			'director',
+			'genre',
+			'language',
+		]);
+		res.json(shows);
 	} catch (err) {
 		console.log(err);
 		res.status(500).json({ errors: [{ msg: 'Internal Server Error' }] });
 	}
 });
 module.exports = router;
-
-// Book ticket route
-// @route   POST api/movies/book/:showId
-// @desc    Get shows by movie and date query (date + 3 days shows return)
-// @access  public
-router.post('/book/:showId', auth, async (req, res) => {
-	try {
-		const { tickets } = req.body;
-		const show = await Show.findById(req.params.showId);
-		tickets.map((ticket) => {
-			show.seats[ticket[0]][ticket[1]] = false;
-		});
-		await Show.findOneAndUpdate({ _id: req.params.showId }, show, {
-			new: false,
-		});
-		res.json(show);
-	} catch (err) {
-		console.log(err);
-		res.status(500).json({ errors: [{ msg: 'Internal Server Error' }] });
-	}
-});
