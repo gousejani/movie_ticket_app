@@ -1,4 +1,4 @@
-import './App.css';
+import './style.css';
 import react, { useEffect } from 'react';
 import Navbar from './components/layout/Navbar';
 import { Provider } from 'react-redux';
